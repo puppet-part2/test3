@@ -84,7 +84,7 @@
 
 
 /* Total number of top queues */
-#define TOP_NUM 17
+#define TOP_NUM 16
 /* Minimum length of top queue */
 #define TOP_MIN_LEN 50
 /* Maximum length of top queue */
@@ -140,7 +140,7 @@ static u32 top_len[TOP_NUM];                        /* The actual length of the 
 static u32 len_max = 0;                             /* The max number of input length */
 static u32 len_min = 0;                             /* The max number of input length */
 static u32 mem_num_max = 0;                         /* The max number of memory access instructions */
-static u32 bug_num_max = 0;                         /* The max number of basic blocks twith a high incidence of bugs */
+//static u32 bug_num_max = 0;                         /* The max number of basic blocks twith a high incidence of bugs */
 static u32 func_num_max = 0;                        /* The max number of syscalls */
 static u32 loop_num_max = 0;                        /* The max umber of loop */
 static u32 global_num_max = 0;                      /* The max number of global variables */
@@ -436,7 +436,7 @@ struct queue_entry {
       current_entry,                  /* Current queue entry ID           */
       exec_cksum,                     /* Checksum of the execution trace  */
       mem_num,                        /* Number of memory access instructions */
-      bug_num,                        /* Number of basic blocks with a high incidence of bugs */
+      //bug_num,                        /* Number of basic blocks with a high incidence of bugs */
       cmp_const_num,                  /* Number of basic blocks cmp instruction with constant jumping to */
       func_num,                       /* Number of syscalls               */
       global_num,                     /* Number of global variables of the basic block */
@@ -472,7 +472,7 @@ struct hash_map{
   u32 cksum_appear;                          /* Minimum capacity                 */
   u32 cksum_capacity;                        /* Maximum number of testcases with same cksum */
   u32 mem_num;                               /* Number of memory access instructions */
-  u32 bug_num;                               /* Number of basic blocks with a high incidence of bugs */
+  //u32 bug_num;                               /* Number of basic blocks with a high incidence of bugs */
   u32 cmp_const_num;                         /* Number of basic blocks cmp instruction with constant jumping to */
   u32 func_num;                              /* Number of syscalls               */
   u32 global_num;                            /* Number of global variables of the basic block */
@@ -690,7 +690,7 @@ static void get_bb_list(u8* target_file){
 /* Update feature for each cksum. Created by LH. */
 static void update_cksum_feature(struct hash_map* hash_index){
   hash_index->mem_num = 0;
-  hash_index->bug_num = 0;
+  //hash_index->bug_num = 0;
   hash_index->func_num = 0;
   hash_index->global_num = 0;
 	hash_index->untouch_num = 0;
@@ -698,7 +698,7 @@ static void update_cksum_feature(struct hash_map* hash_index){
 
   struct bb *b_case = hash_index->bb_list;
   while(b_case){
-    if(bug_bb[b_case->bb_id]) hash_index->bug_num++;
+    //if(bug_bb[b_case->bb_id]) hash_index->bug_num++;
 		hash_index->mem_num += mem_num[b_case->bb_id];
 		hash_index->func_num += func_num[b_case->bb_id];
 		hash_index->global_num += global_num[b_case->bb_id];
@@ -712,7 +712,7 @@ static void update_cksum_feature(struct hash_map* hash_index){
 static void calculate_case_score(struct queue_entry* q, struct hash_map* hash_map_index){
   q->score = 0.0;
   q->mem_num = hash_map_index->mem_num;
-  q->bug_num = hash_map_index->bug_num;
+  //q->bug_num = hash_map_index->bug_num;
   q->func_num = hash_map_index->func_num;
   q->global_num = hash_map_index->global_num;
   q->untouch_num = hash_map_index->untouch_num;
@@ -738,9 +738,9 @@ static void calculate_case_score(struct queue_entry* q, struct hash_map* hash_ma
         case 11: q->score += (double)((double)( q->loop_num) + 0.00000000001)/((double)(loop_num_max) + 0.00000000001); break;
         case 12: q->score += (double)((double)( q->global_num) + 0.00000000001)/((double)(global_num_max) + 0.00000000001); break;
         case 13: q->score += (double)((double)( q->global_assign_num) + 0.00000000001)/((double)(global_assign_num_max) + 0.00000000001); break;
-        case 14: q->score += (double)((double)( q->bug_num) + 0.00000000001)/((double)(bug_num_max) + 0.00000000001); break;
-        case 15: q->score += (double)((double)( q->edge_change_efficiency) + 0.00000000001)/((double)(edge_change_efficiency_max) + 0.00000000001); break;
-        case 16: q->score += (double)((double)( exec_num_min) + 0.00000000001)/((double)(q->exec_num) + 0.00000000001); break;
+        //case 14: q->score += (double)((double)( q->bug_num) + 0.00000000001)/((double)(bug_num_max) + 0.00000000001); break;
+        case 14: q->score += (double)((double)( q->edge_change_efficiency) + 0.00000000001)/((double)(edge_change_efficiency_max) + 0.00000000001); break;
+        case 15: q->score += (double)((double)( exec_num_min) + 0.00000000001)/((double)(q->exec_num) + 0.00000000001); break;
         default: break;
       }
     }
@@ -1797,6 +1797,7 @@ static void update_top_case(struct queue_entry *q){
   }
 
 	/* update top_bug_num[] */
+  /*
   if(q->bug_num > 0){
 	  if(top_len[14] == 0){
       struct top_mem* top_cur =  (struct top_mem *)malloc(sizeof(struct top_mem));
@@ -1869,34 +1870,34 @@ static void update_top_case(struct queue_entry *q){
        }
       }
   	}
-  }
+  }*/
 
 	/* update top_edge_change_efficiency[] */
   if(q->edge_change_efficiency > 0.0){
-  	if(top_len[15] == 0){
+  	if(top_len[14] == 0){
       struct top_mem* top_cur =  (struct top_mem *)malloc(sizeof(struct top_mem));
       top_cur->testcase = q;
-      top_queue[15] = top_cur;
-      top_end[15] = top_cur;
-      top_end[15]->next = NULL;
+      top_queue[14] = top_cur;
+      top_end[14] = top_cur;
+      top_end[14]->next = NULL;
 	  	q->top_flag ^= 32768;
-	  	top_len[15]++;
+	  	top_len[14]++;
   	}
-  	else if(top_len[15] < len_upper){
+  	else if(top_len[14] < len_upper){
       struct top_mem* top_cur =  (struct top_mem *)malloc(sizeof(struct top_mem));
       top_cur->testcase = q;
   		q->top_flag ^= 32768;
-      if(q->edge_change_efficiency > top_queue[15]->testcase->edge_change_efficiency){
-        top_cur->next = top_queue[15];
-        top_queue[15] = top_cur;
+      if(q->edge_change_efficiency > top_queue[14]->testcase->edge_change_efficiency){
+        top_cur->next = top_queue[14];
+        top_queue[14] = top_cur;
       }
-      else if(q->edge_change_efficiency < top_end[15]->testcase->edge_change_efficiency){
-        top_end[15]->next = top_cur;
-        top_end[15] = top_cur;
-        top_end[15]->next = NULL;
+      else if(q->edge_change_efficiency < top_end[14]->testcase->edge_change_efficiency){
+        top_end[14]->next = top_cur;
+        top_end[14] = top_cur;
+        top_end[14]->next = NULL;
       }else{
-        struct top_mem * top_index = top_queue[15];
-        struct top_mem * top_before = top_queue[15];
+        struct top_mem * top_index = top_queue[14];
+        struct top_mem * top_before = top_queue[14];
         while(top_index){
           if(q->edge_change_efficiency > top_index->testcase->edge_change_efficiency){
             top_before->next = top_cur;
@@ -1907,36 +1908,36 @@ static void update_top_case(struct queue_entry *q){
           top_index = top_index->next;
         }
       }
-  		top_len[15]++;
+  		top_len[14]++;
   	}
-  	else if(top_len[15] >= len_upper){
-      if(q->edge_change_efficiency > top_end[15]->testcase->edge_change_efficiency){
-        struct top_mem * top_index = top_queue[15];
-        struct top_mem * top_before = top_queue[15];
+  	else if(top_len[14] >= len_upper){
+      if(q->edge_change_efficiency > top_end[14]->testcase->edge_change_efficiency){
+        struct top_mem * top_index = top_queue[14];
+        struct top_mem * top_before = top_queue[14];
         while(top_index){
           if(q->edge_change_efficiency > top_index->testcase->edge_change_efficiency){
             struct top_mem* top_cur =  (struct top_mem *)malloc(sizeof(struct top_mem));
             top_cur->testcase = q;
-            if(top_index == top_queue[15]){
+            if(top_index == top_queue[14]){
               top_cur->next = top_index;
-              top_queue[15] = top_cur;
+              top_queue[14] = top_cur;
             }else{
               top_before->next = top_cur;
               top_cur->next = top_index;
             }
 		  	    q->top_flag ^= 32768;
-            top_end[15]->testcase->top_flag ^= 32768;
-            if(top_index == top_end[15]){
-              free(top_end[15]);
-              top_end[15] = top_cur;
+            top_end[14]->testcase->top_flag ^= 32768;
+            if(top_index == top_end[14]){
+              free(top_end[14]);
+              top_end[14] = top_cur;
             }else{
-              while(top_index->next != top_end[15]){
+              while(top_index->next != top_end[14]){
                 top_index = top_index->next;
               }
-              free(top_end[15]);
-              top_end[15] = top_index;
+              free(top_end[14]);
+              top_end[14] = top_index;
             }
-            top_end[15]->next = NULL;
+            top_end[14]->next = NULL;
             break;
           }
           top_before = top_index;
@@ -1949,30 +1950,30 @@ static void update_top_case(struct queue_entry *q){
   
   /* update top_exec[] */
 if(q->exec_num > 0){
-  if(top_len[16] == 0){
+  if(top_len[15] == 0){
     struct top_mem* top_cur =  (struct top_mem *)malloc(sizeof(struct top_mem));
     top_cur->testcase = q;
-    top_queue[16] = top_cur;
-    top_end[16] = top_cur;
-    top_end[16]->next = NULL;
+    top_queue[15] = top_cur;
+    top_end[15] = top_cur;
+    top_end[15]->next = NULL;
 		q->top_flag ^= 65536;
-		top_len[16]++;
+		top_len[15]++;
 	}
-	else if(top_len[16] < len_upper){
+	else if(top_len[15] < len_upper){
     struct top_mem* top_cur =  (struct top_mem *)malloc(sizeof(struct top_mem));
     top_cur->testcase = q;
 		q->top_flag ^= 65536;
-    if(q->exec_num < top_queue[16]->testcase->exec_num){
-      top_cur->next = top_queue[16];
-      top_queue[16] = top_cur;
+    if(q->exec_num < top_queue[15]->testcase->exec_num){
+      top_cur->next = top_queue[15];
+      top_queue[15] = top_cur;
     }
-    else if(q->exec_num > top_end[16]->testcase->exec_num){
-      top_end[16]->next = top_cur;
-      top_end[16] = top_cur;
-      top_end[16]->next = NULL;
+    else if(q->exec_num > top_end[15]->testcase->exec_num){
+      top_end[15]->next = top_cur;
+      top_end[15] = top_cur;
+      top_end[15]->next = NULL;
     }else{
-      struct top_mem * top_index = top_queue[16];
-      struct top_mem * top_before = top_queue[16];
+      struct top_mem * top_index = top_queue[15];
+      struct top_mem * top_before = top_queue[15];
       while(top_index){
         if(q->exec_num < top_index->testcase->exec_num){
           top_before->next = top_cur;
@@ -1983,36 +1984,36 @@ if(q->exec_num > 0){
         top_index = top_index->next;
       }
     }
-		top_len[16]++;
+		top_len[15]++;
 	}
-	else if(top_len[16] >= len_upper){
-    if(q->exec_num < top_end[16]->testcase->exec_num){
-      struct top_mem * top_index = top_queue[16];
-      struct top_mem * top_before = top_queue[16];
+	else if(top_len[15] >= len_upper){
+    if(q->exec_num < top_end[15]->testcase->exec_num){
+      struct top_mem * top_index = top_queue[15];
+      struct top_mem * top_before = top_queue[15];
       while(top_index){
         if(q->exec_num < top_index->testcase->exec_num){
           struct top_mem* top_cur =  (struct top_mem *)malloc(sizeof(struct top_mem));
           top_cur->testcase = q;
-          if(top_index == top_queue[16]){
+          if(top_index == top_queue[15]){
             top_cur->next = top_index;
-            top_queue[16] = top_cur;
+            top_queue[15] = top_cur;
           }else{
             top_before->next = top_cur;
             top_cur->next = top_index;
           }
 			    q->top_flag ^= 65536;
-          top_end[16]->testcase->top_flag ^= 65536;
-          if(top_index == top_end[16]){
-            free(top_end[16]);
-            top_end[16] = top_cur;
+          top_end[15]->testcase->top_flag ^= 65536;
+          if(top_index == top_end[15]){
+            free(top_end[15]);
+            top_end[15] = top_cur;
           }else{
-            while(top_index->next != top_end[16]){
+            while(top_index->next != top_end[15]){
               top_index = top_index->next;
             }
-            free(top_end[16]);
-            top_end[16] = top_index;
+            free(top_end[15]);
+            top_end[15] = top_index;
           }
-          top_end[16]->next = NULL;
+          top_end[15]->next = NULL;
           break;
         }
         top_before = top_index;
@@ -2159,17 +2160,17 @@ static void update_top_queue(void){
 	  struct hash_map * hash_index = cksum_hash_map[hash_cksum_now[case_hash_location]]; 
 	  while(hash_index){
       struct bb *b_case = hash_index->bb_list;
-      hash_index->bug_num = 0;
+      //hash_index->bug_num = 0;
 		  hash_index->untouch_num = 0;
   	  while(b_case){
-        if(bug_bb[b_case->bb_id]) hash_index->bug_num++;
+        //if(bug_bb[b_case->bb_id]) hash_index->bug_num++;
 		    hash_index->untouch_num += untouch_num[b_case->bb_id];
     	  b_case = b_case->next;
   	  }
 		  struct top_mem * score_cur = hash_index->score_queue;
       while(score_cur){
         struct queue_entry *q = score_cur->testcase;
-        q->bug_num = hash_index->bug_num;
+        //q->bug_num = hash_index->bug_num;
 		    q->untouch_num = hash_index->untouch_num;
         if (q->exec_num > 0)
           q->edge_change_efficiency = (double)(q->edge_change) / (double)(q->exec_num);
@@ -2211,35 +2212,13 @@ static void update_good_top(void){
         case 11: loop_num_max = top_queue[i_lh]->testcase->loop_num; break;
         case 12: global_num_max = top_queue[i_lh]->testcase->global_num; break;
         case 13: global_assign_num_max = top_queue[i_lh]->testcase->global_assign_num; break;
-        case 14: bug_num_max = top_queue[i_lh]->testcase->bug_num; break;
-        case 15: edge_change_efficiency_max = top_queue[i_lh]->testcase->edge_change_efficiency; break;
-        case 16: exec_num_min = top_queue[i_lh]->testcase->exec_num; break;
+        //case 14: bug_num_max = top_queue[i_lh]->testcase->bug_num; break;
+        case 14: edge_change_efficiency_max = top_queue[i_lh]->testcase->edge_change_efficiency; break;
+        case 15: exec_num_min = top_queue[i_lh]->testcase->exec_num; break;
         default: break;
       }
     }
-    /*
-    else{
-      switch (i_lh) {
-        case 0: exec_us_min = queue_cur->exec_us; break;
-        case 1: exec_us_max = queue_cur->exec_us; break;
-        case 2: len_max = queue_cur->len; break;
-        case 3: len_min = queue_cur->len; break;
-        case 4: bit_num_max = queue_cur->bit_num; break;
-        case 5: interesting_max = queue_cur->interesting; break;
-        case 6: cmp_const_num_max = queue_cur->cmp_const_num; break;
-        case 7: untouch_num_max = queue_cur->untouch_num; break;
-        case 8: mem_num_max = queue_cur->mem_num; break;
-        case 9: depth_max = queue_cur->depth; break;
-        case 10: func_num_max = queue_cur->func_num; break;
-        case 11: loop_num_max = queue_cur->loop_num; break;
-        case 12: global_num_max = queue_cur->global_num; break;
-        case 13: global_assign_num_max = queue_cur->global_assign_num; break;
-        case 14: bug_num_max = queue_cur->bug_num; break;
-        case 15: edge_change_efficiency_max = queue_cur->edge_change_efficiency; break;
-        case 16: exec_num_min = queue_cur->exec_num; break;
-        default: break;
-      }
-    }*/
+
   }
 
   if(len_upper < TOP_MIN_LEN){
@@ -2380,9 +2359,9 @@ static void update_queue_score(void){
                 case 11: q->score += (double)((double)( q->loop_num) + 0.00000000001)/((double)(loop_num_max) + 0.00000000001); break;
                 case 12: q->score += (double)((double)( q->global_num) + 0.00000000001)/((double)(global_num_max) + 0.00000000001); break;
                 case 13: q->score += (double)((double)( q->global_assign_num) + 0.00000000001)/((double)(global_assign_num_max) + 0.00000000001); break;
-                case 14: q->score += (double)((double)( q->bug_num) + 0.00000000001)/((double)(bug_num_max) + 0.00000000001); break;
-                case 15: q->score += (double)((double)( q->edge_change_efficiency) + 0.00000000001)/((double)(edge_change_efficiency_max) + 0.00000000001); break;
-                case 16: q->score += (double)((double)( exec_num_min) + 0.00000000001)/((double)(q->exec_num) + 0.00000000001); break;
+                //case 14: q->score += (double)((double)( q->bug_num) + 0.00000000001)/((double)(bug_num_max) + 0.00000000001); break;
+                case 14: q->score += (double)((double)( q->edge_change_efficiency) + 0.00000000001)/((double)(edge_change_efficiency_max) + 0.00000000001); break;
+                case 15: q->score += (double)((double)( exec_num_min) + 0.00000000001)/((double)(q->exec_num) + 0.00000000001); break;
                 default: break;
               }
             }
@@ -6125,7 +6104,7 @@ keep_as_crash:
 #endif /* ^!SIMPLE_FILES */
 
       write_to_testcase(mem,len);
-      mark_bug_bb();
+      //mark_bug_bb();
       unique_crashes++;
 	    if(!stop_measure){
         queue_cur->interesting++;
