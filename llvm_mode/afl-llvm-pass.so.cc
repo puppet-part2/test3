@@ -412,6 +412,39 @@ bool AFLCoverage::runOnModule(Module &M) {
   free(bb_queue);
   fclose(bb_file);
 
+  bb_file = NULL;
+  bb_file_ptr = NULL;
+  u32 test_area_ptr = 0;
+  u32 record_map_size = 0;
+
+  if((bb_file_ptr = getenv("AFL_LLVM_DOCUMENT_IDS")) != NULL){
+    if ((bb_file = fopen(bb_file_ptr, "r")) == NULL){
+      if((bb_file = fopen(bb_file_ptr, "w")) == NULL){
+        FATAL("Cannot access document file.");
+      }
+    }else if(fscanf(bb_file,"%u",&record_map_size)==-1) {
+     FATAL("Error in fscanf function.\n");
+    }  
+  }
+  #ifdef __x86_64__
+  test_area_ptr = ((afl_global_edge_id>>3)+1)<<3;
+  if(record_map_size < test_area_ptr){
+    fseek(bb_file, 0, SEEK_SET);
+    fprintf(bb_file, "%u\n", test_area_ptr);
+  }
+#else
+  test_area_ptr = ((afl_global_edge_id>>2)+1)<<2;
+  if(record_map_size < test_area_ptr){
+    fseek(bb_file, 0, SEEK_SET);
+    fprintf(bb_file, "%u\n", test_area_ptr);
+  }
+#endif /* ^__x86_64__ */
+
+fclose(bb_file);
+
+
+
+
   return true;
 
 }
