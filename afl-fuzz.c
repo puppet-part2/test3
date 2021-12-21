@@ -15215,7 +15215,7 @@ break;
   if (!out_file) setup_stdio_file();
 
   check_binary(argv[optind]);
-  check_binary_lh(crash_binary);
+  //check_binary_lh(crash_binary);
 
   start_time = get_cur_time();
 
