@@ -15310,7 +15310,7 @@ break;
       case_location++;
 
       u64 cur_ms_lv = get_cur_time();
-      if (unlikely(start_flag == 0 && cur_ms_lv - start_time > 48*60*60*1000))
+      if (unlikely(start_flag == 0 && cur_ms_lv - start_time > 8*60*60*1000))
       {start_flag = 1;}
       //if(tmp_hash_total < hash_total)
       //  goto retry_hash_total;
