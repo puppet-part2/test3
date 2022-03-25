@@ -100,6 +100,7 @@ struct bb_cmp_suc{
 };
 
 struct bb{    
+  u8 instrument;                                /* Flag to mark whether to instrument          */  
   BasicBlock* bb_p;                             /* Basic block pointer                         */
 	unsigned int bb_id;                           /* Basic block id                              */
   unsigned int bb_mem_num;                      /* The number of memory accesses of the basic block */
@@ -139,6 +140,71 @@ bool is_syscall(llvm::StringRef fn_name){
       return true;
   }
   return false;
+}
+
+
+/* Function that we never instrument or analyze */
+/* Note: this ignore check is also called in isInInstrumentList() */
+bool isIgnoreFunction(const llvm::Function *F) {
+
+  // Starting from "LLVMFuzzer" these are functions used in libfuzzer based
+  // fuzzing campaign installations, e.g. oss-fuzz
+
+  static constexpr const char *ignoreList[] = {
+
+      "asan.",
+      "llvm.",
+      "sancov.",
+      "__ubsan",
+      "ign.",
+      "__afl",
+      "_fini",
+      "__libc_",
+      "__asan",
+      "__msan",
+      "__cmplog",
+      "__sancov",
+      "__san",
+      "__cxx_",
+      "__decide_deferred",
+      "_GLOBAL",
+      "_ZZN6__asan",
+      "_ZZN6__lsan",
+      "msan.",
+      "LLVMFuzzerM",
+      "LLVMFuzzerC",
+      "LLVMFuzzerI",
+      "maybe_duplicate_stderr",
+      "discard_output",
+      "close_stdout",
+      "dup_and_close_stderr",
+      "maybe_close_fd_mask",
+      "ExecuteFilesOnyByOne"
+
+  };
+
+  for (auto const &ignoreListFunc : ignoreList) {
+
+    if (F->getName().startswith(ignoreListFunc)) { return true; }
+
+  }
+
+  static constexpr const char *ignoreSubstringList[] = {
+
+      "__asan", "__msan",       "__ubsan",    "__lsan",  "__san", "__sanitize",
+      "__cxx",  "DebugCounter", "DwarfDebug", "DebugLoc"
+
+  };
+
+  for (auto const &ignoreListFunc : ignoreSubstringList) {
+
+    // hexcoder: F->getName().contains() not avaiilable in llvm 3.8.0
+    if (StringRef::npos != F->getName().find(ignoreListFunc)) { return true; }
+
+  }
+
+  return false;
+
 }
 
 bool AFLCoverage::runOnModule(Module &M) {
@@ -183,14 +249,33 @@ bool AFLCoverage::runOnModule(Module &M) {
   /* Added by LH. */
   bool bb_first = true;
 	struct bb *bb_cur = NULL; 
-  for (auto &F : M)
-    for (auto &BB : F) {
+  for (auto &F : M){
+    /* added by LH */
 
+    if (F.size() < 1) continue;
+    if (isIgnoreFunction(&F)) continue;
+
+    // the instrument file list check
+    AttributeList Attrs = F.getAttributes();
+    if (Attrs.hasAttribute(-1, StringRef("skipinstrument"))) {
+      continue;
+    }
+
+    for (auto &BB : F) {  
+      u32 succ_num = 0;
+      for (succ_iterator SI = succ_begin(&BB), SE = succ_end(&BB); SI != SE; ++SI){
+        succ_num++;
+      }
       struct bb *bb_now = (struct bb *)malloc(sizeof(struct bb));
       bb_now->bb_mem_num = 0;
       bb_now->bb_func_num = 0;
       bb_now->bb_global_num = 0;
       bb_now->bb_global_assign_num = 0;
+      if(succ_num > 1) {
+        bb_now->instrument = 1;
+      } else {
+        bb_now->instrument = 0;
+      }
 
       /* Determine some static analysis information for each basic block. Added by LH. */ 
       for (BasicBlock::iterator inst = BB.begin(); inst != BB.end(); ++inst){
@@ -286,11 +371,12 @@ bool AFLCoverage::runOnModule(Module &M) {
         }
       }
     }
-
+  }
   /* Build a list of subsequent basic blocks, added by LH. */  
 	struct bb *b = bb_queue;
   while(b){
-    for (auto it = succ_begin(b->bb_p), et = succ_end(b->bb_p); it != et; ++it){
+    if(b->instrument){
+      for (auto it = succ_begin(b->bb_p), et = succ_end(b->bb_p); it != et; ++it){
         BasicBlock *  newBB = NULL;
         BasicBlock *succ = *it;
         newBB = llvm::SplitEdge(b->bb_p, succ);
@@ -307,6 +393,7 @@ bool AFLCoverage::runOnModule(Module &M) {
         /* Update bitmap */
         LoadInst *Counter = IRB.CreateLoad(MapPtrIdx);
             Counter->setMetadata(M.getMDKindID("nosanitize"),
+
                                  MDNode::get(C, None));                  
         ConstantInt *One = ConstantInt::get(Int8Ty, 1);
         Value *Incr = IRB.CreateAdd(Counter, One);
@@ -314,7 +401,6 @@ bool AFLCoverage::runOnModule(Module &M) {
                 ->setMetadata(M.getMDKindID("nosanitize"),
                               MDNode::get(C, None));
         inst_blocks++;
-
 	      struct bb *b_suc = bb_queue;
         while(b_suc){
           if(b_suc->bb_p == succ){
@@ -352,7 +438,8 @@ bool AFLCoverage::runOnModule(Module &M) {
           b_suc = b_suc->next;
         }
         afl_global_edge_id++;
-      }
+      } 
+    }
     b = b->next;
   }
 
@@ -411,39 +498,6 @@ bool AFLCoverage::runOnModule(Module &M) {
   fprintf(bb_file,"e\n");
   free(bb_queue);
   fclose(bb_file);
-
-  bb_file = NULL;
-  bb_file_ptr = NULL;
-  u32 test_area_ptr = 0;
-  u32 record_map_size = 0;
-
-  if((bb_file_ptr = getenv("AFL_LLVM_DOCUMENT_IDS")) != NULL){
-    if ((bb_file = fopen(bb_file_ptr, "r")) == NULL){
-      if((bb_file = fopen(bb_file_ptr, "w")) == NULL){
-        FATAL("Cannot access document file.");
-      }
-    }else if(fscanf(bb_file,"%u",&record_map_size)==-1) {
-     FATAL("Error in fscanf function.\n");
-    }  
-  }
-  #ifdef __x86_64__
-  test_area_ptr = ((afl_global_edge_id>>3)+1)<<3;
-  if(record_map_size < test_area_ptr){
-    fseek(bb_file, 0, SEEK_SET);
-    fprintf(bb_file, "%u\n", test_area_ptr);
-  }
-#else
-  test_area_ptr = ((afl_global_edge_id>>2)+1)<<2;
-  if(record_map_size < test_area_ptr){
-    fseek(bb_file, 0, SEEK_SET);
-    fprintf(bb_file, "%u\n", test_area_ptr);
-  }
-#endif /* ^__x86_64__ */
-
-fclose(bb_file);
-
-
-
 
   return true;
 

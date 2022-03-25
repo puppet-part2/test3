@@ -74,6 +74,7 @@ namespace {
 }
 
 struct bb{    
+  u8 instrument;                                /* Flag to mark whether to instrument          */ 
   BasicBlock* bb_p;                             /* Basic block pointer                         */
 	struct bb *next;                   	        	/* Next element, if any                        */
 };
@@ -121,9 +122,18 @@ bool AFLCoverage::runOnModule(Module &M) {
 	struct bb *bb_cur = NULL; 
   for (auto &F : M)
     for (auto &BB : F) {
+      u32 succ_num = 0;
+      for (succ_iterator SI = succ_begin(&BB), SE = succ_end(&BB); SI != SE; ++SI){
+        succ_num++;
+      }
       struct bb *bb_now = (struct bb *)malloc(sizeof(struct bb));
       bb_now->bb_p = &BB;
 			bb_now->next = NULL;
+      if(succ_num > 1) {
+        bb_now->instrument = 1;
+      } else {
+        bb_now->instrument = 0;
+      }
       if(bb_first) {
         bb_first = false;
         bb_queue = bb_now;
@@ -138,7 +148,8 @@ bool AFLCoverage::runOnModule(Module &M) {
 	struct bb *b = bb_queue;
   int inst_blocks = 0;
   while(b){
-    for (auto it = succ_begin(b->bb_p), et = succ_end(b->bb_p); it != et; ++it){
+    if(b->instrument) {
+      for (auto it = succ_begin(b->bb_p), et = succ_end(b->bb_p); it != et; ++it){
         BasicBlock *  newBB = NULL;
         BasicBlock *succ = *it;
         newBB = llvm::SplitEdge(b->bb_p, succ);
@@ -155,7 +166,8 @@ bool AFLCoverage::runOnModule(Module &M) {
         IRB.CreateStore(CurLoc, BBPtrIdx);
         inst_blocks++;
       }
-      b = b->next;
+    }
+    b = b->next;
   }
 
 
@@ -222,3 +234,4 @@ static RegisterPass<AFLCoverage> X("afl-llvm-pass", "afl++ LTO instrumentation p
 
 static RegisterStandardPasses RegisterAFLPass(
     PassManagerBuilder::EP_FullLinkTimeOptimizationLast, registerAFLPass);
+
